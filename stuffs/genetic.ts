@@ -126,28 +126,23 @@ function calculateFitness(stuff: Stuff, requiredEffects: Effects): number {
 	let fitness = 0;
 	const combinedStats = calculateCombinedStats(Object.values(stuff.items), {});
 
-	// First apply a massive penalty for exceeding AP or MP caps
-	// This ensures these critical stats stay within bounds
+	// Too High AP MP penalty (exponential)
 	if (combinedStats.ap !== undefined) {
 		const maxAP = requiredEffects.ap || maxEffectsTable.ap || 12;
 		if (combinedStats.ap > maxAP) {
-			// Apply extremely heavy penalty - this should make it practically impossible
-			// for solutions exceeding max AP to survive
 			fitness -= 1000000 * (combinedStats.ap - maxAP);
-			return fitness; // Return immediately as this solution is invalid
+			return fitness;
 		}
 	}
-
 	if (combinedStats.mp !== undefined) {
 		const maxMP = requiredEffects.mp || maxEffectsTable.mp || 6;
 		if (combinedStats.mp > maxMP) {
-			// Apply extremely heavy penalty
 			fitness -= 1000000 * (combinedStats.mp - maxMP);
-			return fitness; // Return immediately as this solution is invalid
+			return fitness;
 		}
 	}
 
-	// apply a small penalty for having less ap or mp than required
+	// too low ap mp penalty (small)
 	if (effectWeights.ap && requiredEffects.ap) {
 		fitness -= effectWeights.ap * Math.max(0, requiredEffects.ap - (combinedStats.ap || 0));
 	}
@@ -155,22 +150,14 @@ function calculateFitness(stuff: Stuff, requiredEffects: Effects): number {
 		fitness -= effectWeights.mp * Math.max(0, requiredEffects.mp - (combinedStats.mp || 0));
 	}
 
-	// Then check other effects
 	for (const effect in requiredEffects) {
 		const requiredValue = requiredEffects[effect as keyof Effects] || 0;
 		const actualValue = combinedStats[effect as keyof Effects] || 0;
 		const maxValue = maxEffectsTable[effect as keyof Effects] || Infinity;
 		const weight = effectWeights[effect as keyof Effects] || 1;
-
-		if (actualValue > maxValue) {
-			// Increase penalty exponentially for exceeding maximum values
-			fitness -= weight * (actualValue - maxValue) * (actualValue - maxValue) * 1000;
-		} else {
-			// Normal fitness calculation for values within range
-			fitness -= weight * Math.abs(requiredValue - actualValue);
-		}
+		if (actualValue > maxValue) fitness -= weight * (actualValue - maxValue) * (actualValue - maxValue) * 1000;
+		else fitness -= weight * Math.abs(requiredValue - actualValue);
 	}
-
 	return fitness;
 }
 
@@ -179,8 +166,7 @@ function calculateCombinedStats(bestItems: Item[], baseEffects: Effects): Effect
 	const setCounts: { [setId: number]: number } = {};
 
 	for (const item of bestItems) {
-		if (!item || !item.effects) continue; // Ensure the item is valid
-
+		if (!item || !item.effects) continue;
 		for (const effect in item.effects) {
 			const key = effect as keyof Effects;
 			combinedStats[key] = (combinedStats[key] || 0) + (item.effects[key] || 0);
@@ -229,12 +215,12 @@ function createRandomStuff(): Stuff {
 		},
 	};
 
-	// Ensure ring2 is not a duplicate of ring1
+	// Avoid duplicate rings
 	do {
 		stuff.items.ring2 = rings[Math.floor(Math.random() * rings.length)] || ({} as Item);
 	} while (stuff.items.ring2.id === stuff.items.ring1.id);
 
-	// Assign unique Dofus items to all slots
+	// Avoid duplicate dofus slots
 	const usedDofusIds = new Set<number>();
 	if (stuff.items.DofusSlot1 && stuff.items.DofusSlot1.id) {
 		usedDofusIds.add(stuff.items.DofusSlot1.id);
@@ -248,7 +234,6 @@ function createRandomStuff(): Stuff {
 		do {
 			item = allDofusSlotItems[Math.floor(Math.random() * allDofusSlotItems.length)] || ({} as Item);
 			attempts++;
-			// Prevent infinite loop
 			if (attempts > 100) break;
 		} while (item && item.id && usedDofusIds.has(item.id));
 
@@ -288,14 +273,11 @@ function ensureNoDuplicateDofus(stuff: Stuff): Stuff {
 	return stuff;
 }
 
-/**
- * Repairs a stuff by replacing items until AP and MP are within limits
- */
+// hard repair too high ap mp
 function repairExcessStats(stuff: Stuff, baseEffects: Effects): Stuff {
 	const repairedStuff = { items: { ...stuff.items } };
 	let combinedStats = calculateCombinedStats(Object.values(repairedStuff.items), baseEffects);
 
-	// Keep repairing until both AP and MP are within limits or we've tried too many times
 	let attempts = 0;
 	const maxAttempts = 50;
 
@@ -362,7 +344,7 @@ function repairExcessStats(stuff: Stuff, baseEffects: Effects): Stuff {
 						}
 					}
 					break;
-				// Add cases for other slots similarly
+
 				default: {
 					// For other slots, just replace with a random item from the appropriate category
 					const randomReplacement = getRandomItemForSlot(slot);
@@ -392,9 +374,6 @@ function repairExcessStats(stuff: Stuff, baseEffects: Effects): Stuff {
 	return ensureNoDuplicateDofus(repairedStuff);
 }
 
-/**
- * Helper function to get a random item appropriate for the given slot
- */
 function getRandomItemForSlot(slot: keyof Stuff["items"]): Item | undefined {
 	switch (slot) {
 		case "hat":
@@ -437,10 +416,7 @@ function crossover(parent1: Stuff, parent2: Stuff, baseEffects: Effects): Stuff 
 		}
 	}
 
-	// Ensure no duplicate dofus items
 	const noDuplicatesChild = ensureNoDuplicateDofus(child);
-
-	// Repair any stats exceeding limits
 	return repairExcessStats(noDuplicatesChild, baseEffects);
 }
 
@@ -544,16 +520,12 @@ export function geneticAlgorithm(
 		// Elite selection - keep top performers
 		const newPopulation: Stuff[] = population.slice(0, Math.max(2, Math.floor(populationSize * 0.1)));
 
-		// Fill population with new offspring
 		while (newPopulation.length < populationSize) {
 			const parent1 = tournamentSelection(population, requiredEffects);
 			const parent2 = tournamentSelection(population, requiredEffects);
 			let child = crossover(parent1, parent2, baseEffects);
 
-			// Apply mutation with 10% chance
-			if (Math.random() < 0.1) {
-				child = mutate(child, baseEffects);
-			}
+			if (Math.random() < 0.1) child = mutate(child, baseEffects);
 
 			// Always ensure we have no duplicates and stats are within limits
 			child = ensureNoDuplicateDofus(child);
@@ -562,10 +534,8 @@ export function geneticAlgorithm(
 			newPopulation.push(child);
 		}
 
-		// Update the population with the new population
 		population = newPopulation;
 
-		// Log progress every 100 generations
 		if (generation % 100 === 0) {
 			// const bestStuff = population[0];
 			// const bestStats = calculateCombinedStats(Object.values(bestStuff.items), {});
@@ -573,7 +543,6 @@ export function geneticAlgorithm(
 		}
 	}
 
-	// Get the best solution found
 	const bestStuff = population[0];
 	let combinedStats = calculateCombinedStats(Object.values(bestStuff.items), baseEffects);
 
