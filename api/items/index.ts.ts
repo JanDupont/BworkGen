@@ -22,7 +22,7 @@ export const items: Item[] = [];
 readItems();
 
 function readItems(): void {
-	const data = JSON.parse(Deno.readTextFileSync("../data/items.json")) as Item[];
+	const data = JSON.parse(Deno.readTextFileSync("./api/data/items.json")) as Item[];
 	data.forEach((dItem) => {
 		items.push(dItem);
 	});

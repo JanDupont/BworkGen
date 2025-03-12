@@ -192,6 +192,6 @@ async function fetchItems() {
 }
 
 function writeItemsFile(items: Item[]) {
-	const path = "../data/items.json";
+	const path = "./api/data/items.json";
 	Deno.writeTextFile(path, JSON.stringify(items), { create: true });
 }

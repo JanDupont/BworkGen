@@ -1,4 +1,4 @@
-import type { Item, Effects, Stuff, ItemCount } from "../types.ts";
+import type { Effects, Item, ItemCount, Stuff } from "../types.ts";
 import { items } from "../items/index.ts.ts";
 import { sets } from "../sets/index.ts";
 import { weapons } from "../weapons/index.ts";
@@ -6,17 +6,27 @@ import { weapons } from "../weapons/index.ts";
 // TODO:
 // - mehr weights
 // - ap mp < constraints
+// - weights balancen:
+// 		- wenn mehr als 1 element required, dann power weight = 2, sonst 1
+// 		- nicht required elements weight = 0.3
+// - weights im frontend über slider einstellbar machen
+// - trophy support (im prinzip auch constraints)
+// - pictures persistieren, wenn nicht vorhanden über dofusbook ziehen und speichern
+// - required stats im frontend einstellbar machen
+// - frontend stats icons
+// - stuff item hover tooltip mit stats, name
 
 const effectWeights: { [key in keyof Effects]: number } = {
 	ap: 100,
 	mp: 80,
+	range: 51,
 	critical: 10,
 	vitality: 0.2,
 	strength: 0.5,
 	intelligence: 1.2,
-	agility: 0,
-	chance: 0,
-	power: 2,
+	agility: 1,
+	chance: 1,
+	power: 1,
 	res_percent_neutral: 10,
 	res_percent_earth: 10,
 	res_percent_fire: 10,
@@ -122,19 +132,18 @@ items.forEach((item) => {
 	}
 });
 
-function calculateFitness(stuff: Stuff, requiredEffects: Effects): number {
+function calculateFitness(stuff: Stuff, requiredEffects: Effects, baseEffects: Effects): number {
 	let fitness = 0;
-	const combinedStats = calculateCombinedStats(Object.values(stuff.items), {});
-
+	const combinedStats = calculateCombinedStats(Object.values(stuff.items), baseEffects);
 	// Too High AP MP penalty (exponential)
-	if (combinedStats.ap !== undefined) {
+	if (combinedStats.ap) {
 		const maxAP = requiredEffects.ap || maxEffectsTable.ap || 12;
 		if (combinedStats.ap > maxAP) {
 			fitness -= 1000000 * (combinedStats.ap - maxAP);
 			return fitness;
 		}
 	}
-	if (combinedStats.mp !== undefined) {
+	if (combinedStats.mp) {
 		const maxMP = requiredEffects.mp || maxEffectsTable.mp || 6;
 		if (combinedStats.mp > maxMP) {
 			fitness -= 1000000 * (combinedStats.mp - maxMP);
@@ -155,8 +164,9 @@ function calculateFitness(stuff: Stuff, requiredEffects: Effects): number {
 		const actualValue = combinedStats[effect as keyof Effects] || 0;
 		const maxValue = maxEffectsTable[effect as keyof Effects] || Infinity;
 		const weight = effectWeights[effect as keyof Effects] || 1;
-		if (actualValue > maxValue) fitness -= weight * (actualValue - maxValue) * (actualValue - maxValue) * 1000;
-		else fitness -= weight * Math.abs(requiredValue - actualValue);
+		if (actualValue > maxValue) {
+			fitness -= weight * (actualValue - maxValue) * (actualValue - maxValue) * 1000;
+		} else fitness -= weight * Math.abs(requiredValue - actualValue);
 	}
 	return fitness;
 }
@@ -188,6 +198,26 @@ function calculateCombinedStats(bestItems: Item[], baseEffects: Effects): Effect
 				}
 			}
 		}
+	}
+
+	combinedStats.initiative =
+		(combinedStats.initiative || 0) +
+		(combinedStats.strength || 0) +
+		(combinedStats.intelligence || 0) +
+		(combinedStats.chance || 0) +
+		(combinedStats.agility || 0);
+	combinedStats.pp = (combinedStats.pp || 0) + (combinedStats.chance || 0) / 100;
+	combinedStats.dodge = (combinedStats.dodge || 0) + (combinedStats.agility || 0) / 100;
+	combinedStats.lock = (combinedStats.lock || 0) + (combinedStats.chance || 0) / 100;
+	combinedStats.ap_parry = (combinedStats.ap_parry || 0) + (combinedStats.wisdom || 0) / 100;
+	combinedStats.mp_parry = (combinedStats.mp_parry || 0) + (combinedStats.wisdom || 0) / 100;
+	combinedStats.ap_red = (combinedStats.ap_red || 0) + (combinedStats.wisdom || 0) / 100;
+	combinedStats.mp_red = (combinedStats.mp_red || 0) + (combinedStats.wisdom || 0) / 100;
+	combinedStats.pods = (combinedStats.pods || 0) + (combinedStats.strength || 0) * 5;
+
+	// round all stats to 2 decimal places
+	for (const key in combinedStats) {
+		combinedStats[key as keyof Effects] = Math.round((combinedStats[key as keyof Effects] || 0) * 100) / 100;
 	}
 
 	return combinedStats;
@@ -481,21 +511,29 @@ function mutate(stuff: Stuff, baseEffects: Effects): Stuff {
 	return repairExcessStats(ensureNoDuplicateDofus(mutatedStuff), baseEffects);
 }
 
-function tournamentSelection(population: Stuff[], requiredEffects: Effects, tournamentSize = 5): Stuff {
+function tournamentSelection(
+	population: Stuff[],
+	requiredEffects: Effects,
+	baseEffects: Effects,
+	tournamentSize = 5
+): Stuff {
 	const tournament = [];
 	for (let i = 0; i < tournamentSize; i++) {
 		tournament.push(population[Math.floor(Math.random() * population.length)]);
 	}
-	tournament.sort((a, b) => calculateFitness(b, requiredEffects) - calculateFitness(a, requiredEffects));
+	tournament.sort(
+		(a, b) => calculateFitness(b, requiredEffects, baseEffects) - calculateFitness(a, requiredEffects, baseEffects)
+	);
 	return tournament[0];
 }
 
-export function geneticAlgorithm(
+export async function geneticAlgorithm(
 	requiredEffects: Effects,
 	baseEffects: Effects,
-	populationSize = 200,
-	generations = 2000
-): { stuff: Stuff; combinedStats: Effects } {
+	populationSize: number,
+	generations: number,
+	progressCallback?: (generation: number, bestStuff: Stuff, stats: Effects, fitness: number) => void
+): Promise<{ stuff: Stuff; combinedStats: Effects }> {
 	let population: Stuff[] = Array.from({ length: populationSize }, createRandomStuff);
 
 	// Make sure initial population is valid
@@ -506,10 +544,13 @@ export function geneticAlgorithm(
 
 	for (let generation = 0; generation < generations; generation++) {
 		// Sort by fitness (best first)
-		population.sort((a, b) => calculateFitness(b, requiredEffects) - calculateFitness(a, requiredEffects));
+		population.sort(
+			(a, b) =>
+				calculateFitness(b, requiredEffects, baseEffects) - calculateFitness(a, requiredEffects, baseEffects)
+		);
 
 		// Check if we've improved
-		const currentBestFitness = calculateFitness(population[0], requiredEffects);
+		const currentBestFitness = calculateFitness(population[0], requiredEffects, baseEffects);
 		if (currentBestFitness > bestFitnessEver) {
 			bestFitnessEver = currentBestFitness;
 			generationsWithoutImprovement = 0;
@@ -517,12 +558,28 @@ export function geneticAlgorithm(
 			generationsWithoutImprovement++;
 		}
 
+		if (generation % 10 === 0) {
+			const bestStuff = population[0];
+			const bestStats = calculateCombinedStats(Object.values(bestStuff.items), baseEffects);
+			console.log(`Generation ${generation}: Best fitness = ${currentBestFitness}`);
+
+			// Call the progress callback if provided
+			if (progressCallback) {
+				console.log("trigger callback");
+				progressCallback(generation, bestStuff, bestStats, currentBestFitness);
+			}
+
+			// Yield to the event loop to allow WebSocket messages to be sent
+			// and other requests to be processed
+			await new Promise((resolve) => setTimeout(resolve, 0));
+		}
+
 		// Elite selection - keep top performers
 		const newPopulation: Stuff[] = population.slice(0, Math.max(2, Math.floor(populationSize * 0.1)));
 
 		while (newPopulation.length < populationSize) {
-			const parent1 = tournamentSelection(population, requiredEffects);
-			const parent2 = tournamentSelection(population, requiredEffects);
+			const parent1 = tournamentSelection(population, requiredEffects, baseEffects);
+			const parent2 = tournamentSelection(population, requiredEffects, baseEffects);
 			let child = crossover(parent1, parent2, baseEffects);
 
 			if (Math.random() < 0.1) child = mutate(child, baseEffects);
@@ -532,15 +589,14 @@ export function geneticAlgorithm(
 			child = repairExcessStats(child, baseEffects);
 
 			newPopulation.push(child);
+
+			// Yield to event loop every 10 individuals to prevent blocking
+			if (newPopulation.length % 10 === 0) {
+				await new Promise((resolve) => setTimeout(resolve, 0));
+			}
 		}
 
 		population = newPopulation;
-
-		if (generation % 100 === 0) {
-			// const bestStuff = population[0];
-			// const bestStats = calculateCombinedStats(Object.values(bestStuff.items), {});
-			console.log(`Generation ${generation}: Best fitness = ${currentBestFitness}`);
-		}
 	}
 
 	const bestStuff = population[0];

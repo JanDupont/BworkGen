@@ -18,7 +18,7 @@ export const weapons: Item[] = [];
 readItems();
 
 function readItems(): void {
-	const data = JSON.parse(Deno.readTextFileSync("../data/weapons.json")) as Item[];
+	const data = JSON.parse(Deno.readTextFileSync("./api/data/weapons.json")) as Item[];
 	data.forEach((dItem) => {
 		weapons.push(dItem);
 	});
