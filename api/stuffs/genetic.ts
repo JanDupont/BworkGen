@@ -561,11 +561,9 @@ export async function geneticAlgorithm(
 		if (generation % 10 === 0) {
 			const bestStuff = population[0];
 			const bestStats = calculateCombinedStats(Object.values(bestStuff.items), baseEffects);
-			console.log(`Generation ${generation}: Best fitness = ${currentBestFitness}`);
 
 			// Call the progress callback if provided
 			if (progressCallback) {
-				console.log("trigger callback");
 				progressCallback(generation, bestStuff, bestStats, currentBestFitness);
 			}
 

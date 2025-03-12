@@ -61,15 +61,9 @@ const getDefaultBaseEffects = (): Effects => ({
 function handleWebSocketMessage(ws: WebSocket, connectionId: number, event: MessageEvent) {
 	try {
 		const message = JSON.parse(event.data);
-		console.log(`Received message: ${message.type} from connection ${connectionId}`);
 
 		if (message.type === "start_algorithm") {
-			console.log(`Starting algorithm for connection ${connectionId}`);
-
-			// Get required effects from client or use empty object as fallback
 			const requiredEffects: Effects = message.requiredEffects || {};
-			console.log("Using required effects:", requiredEffects);
-
 			const populationSize = message.populationSize || 300;
 			const generations = message.generations || 1000;
 
@@ -81,12 +75,8 @@ function handleWebSocketMessage(ws: WebSocket, connectionId: number, event: Mess
 				populationSize,
 				generations,
 				(generation, bestStuff, stats, fitness) => {
-					console.log(`Callback for generation ${generation}`);
-
 					if (ws.readyState === WebSocket.OPEN) {
 						const lightweightStuff = structuredClone(bestStuff);
-
-						console.log(`Sending progress update for generation ${generation}`);
 
 						// Send progress update immediately
 						ws.send(
