@@ -13,6 +13,6 @@ WIP
 ### Genetic Algorithm & Greedy Algorithm
 
 ```bash
-cd stuffs
-deno run main.ts
+deno install
+deno task dev
 ```
