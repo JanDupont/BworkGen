@@ -4,17 +4,20 @@ import { sets } from "../sets/index.ts";
 import { weapons } from "../weapons/index.ts";
 
 // TODO:
-// - mehr weights
 // - ap mp < constraints
 // - weights balancen:
 // 		- wenn mehr als 1 element required, dann power weight = 2, sonst 1
-// 		- nicht required elements weight = 0.3
-// - weights im frontend über slider einstellbar machen
 // - trophy support (im prinzip auch constraints)
 // - pictures persistieren, wenn nicht vorhanden über dofusbook ziehen und speichern
 // - required stats im frontend einstellbar machen
+// - Exos checkboxes (AP, MP, Range)
 // - frontend stats icons
 // - stuff item hover tooltip mit stats, name
+// - must-include items (frontend, an backend weitergeben)
+// - must-exclude items (frontend, an backend weitergeben)
+
+// - Ergebnisse speichern, in UI wieder auswählbar machen
+// - UI: Current Settings in LocalStorage cachen
 
 const effectSink: { [key in keyof Effects]: number } = {
 	ap: 100,
@@ -92,11 +95,8 @@ function biasWeights(requiredEffects: Effects) {
 const maxEffectsTable: { [key in keyof Effects]: number } = {
 	ap: 12,
 	mp: 6,
+	range: 6,
 	critical: 95,
-	strength: 1000,
-	intelligence: 1000,
-	agility: 1000,
-	chance: 1000,
 	res_percent_neutral: 50,
 	res_percent_earth: 50,
 	res_percent_fire: 50,

@@ -445,6 +445,38 @@
       ]
     }
   },
+  "redirects": {
+    "https://esm.sh/@vue/devtools-api@^7.7.2?target=denonext": "https://esm.sh/@vue/devtools-api@7.7.2?target=denonext",
+    "https://esm.sh/@vue/devtools-kit@^7.7.2?target=denonext": "https://esm.sh/@vue/devtools-kit@7.7.2?target=denonext",
+    "https://esm.sh/@vue/devtools-shared@^7.7.2?target=denonext": "https://esm.sh/@vue/devtools-shared@7.7.2?target=denonext",
+    "https://esm.sh/birpc@^0.2.19?target=denonext": "https://esm.sh/birpc@0.2.19?target=denonext",
+    "https://esm.sh/hookable@^5.5.3?target=denonext": "https://esm.sh/hookable@5.5.3?target=denonext",
+    "https://esm.sh/perfect-debounce@^1.0.0?target=denonext": "https://esm.sh/perfect-debounce@1.0.0?target=denonext",
+    "https://esm.sh/pinia": "https://esm.sh/pinia@3.0.1",
+    "https://esm.sh/vue@^3.5.13?target=denonext": "https://esm.sh/vue@3.5.13?target=denonext"
+  },
+  "remote": {
+    "https://esm.sh/@vue/devtools-api@7.7.2/denonext/devtools-api.mjs": "577af7be833350f09c7c0c484ba6e3716ffad11836b44104c9c381498c616d87",
+    "https://esm.sh/@vue/devtools-api@7.7.2?target=denonext": "55dd8a8ccfd9a226a92f003581713dbc6a2a280e9bdab6781c365f17346c506c",
+    "https://esm.sh/@vue/devtools-kit@7.7.2/denonext/devtools-kit.mjs": "80435fd87f6d28732526f1d460abce2981d7bfbfd2ff6a07535244e4025cf2e1",
+    "https://esm.sh/@vue/devtools-kit@7.7.2?target=denonext": "ad6bc3509b2fcf12297a7546a2f6eba2f28e3d6b0cb3ad94dbd171b55af1e0a8",
+    "https://esm.sh/@vue/devtools-shared@7.7.2/denonext/devtools-shared.mjs": "e73176ed11f3602de5d2544be300b42d81995b26a68c9db0c5e0f06a72aa27cf",
+    "https://esm.sh/@vue/devtools-shared@7.7.2?target=denonext": "d9e5648bb85eb9597aee1698117194285d174ac512eff3419d5884ae1b6e2c75",
+    "https://esm.sh/@vue/reactivity@3.5.13/denonext/reactivity.mjs": "941c3a60455c18fd8d1a7f09782a6717e4bd4d4d1aaabb4b49bc646fdea3680c",
+    "https://esm.sh/@vue/runtime-core@3.5.13/denonext/runtime-core.mjs": "0a69b560fa76042f792dd8946bd1ca67738ca7d0024d2bf469b0946cd4082063",
+    "https://esm.sh/@vue/runtime-dom@3.5.13/denonext/runtime-dom.mjs": "093f84b36a5c2eb65e1c0202215349d134d95d25c3f84153c537c9654c0a09b8",
+    "https://esm.sh/@vue/shared@3.5.13/denonext/shared.mjs": "7c5e76c8edee934e58ea2ba5a86ac62320480650e0f826416b0a68b5e2734e9c",
+    "https://esm.sh/birpc@0.2.19/denonext/birpc.mjs": "136a55fbaf9e50dac8b6f94ecf3482a0d5dcef5d60849c506bd38e6e042e04e2",
+    "https://esm.sh/birpc@0.2.19?target=denonext": "0e7879cbfa83c462461ea72cc96671004fb62ec33beaed87322a0a03ba350758",
+    "https://esm.sh/hookable@5.5.3/denonext/hookable.mjs": "6121ec2b6f4cefff0dbe4ace3c9a605639655c62f148810c9e3568a9be5707c1",
+    "https://esm.sh/hookable@5.5.3?target=denonext": "3b6fcc583846482fdb19251ba76fc217061e0450cc27cda5bb96f2d93d89b4e1",
+    "https://esm.sh/perfect-debounce@1.0.0/denonext/perfect-debounce.mjs": "f0ea489dca4ed7b8aa370e5b906e7557f08ae037d9db0201fe5878c7e4a4f41b",
+    "https://esm.sh/perfect-debounce@1.0.0?target=denonext": "613c3d89ff96214e1c4a96dc0dab1ce568e1526ae7dc93910406c2d21955c432",
+    "https://esm.sh/pinia@3.0.1": "20ca0c4e008ebac573f1362db8affadba21d1ffdd406f05f341cb8c1359316d8",
+    "https://esm.sh/pinia@3.0.1/denonext/pinia.mjs": "17db466141b8ded7d210718e57a9535df1e889663234f88f1cae40a66654c265",
+    "https://esm.sh/vue@3.5.13/denonext/vue.mjs": "5b449dad73f70839d63033ce2d5f894fbaec3647c9899c44ef8e86f54871f200",
+    "https://esm.sh/vue@3.5.13?target=denonext": "3bdd74ed7c956d5a5066af171b36e6834035425fe92d14719eb543f39e98e898"
+  },
   "workspace": {
     "packageJson": {
       "dependencies": [
