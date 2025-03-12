@@ -16,26 +16,78 @@ import { weapons } from "../weapons/index.ts";
 // - frontend stats icons
 // - stuff item hover tooltip mit stats, name
 
-const effectWeights: { [key in keyof Effects]: number } = {
+const effectSink: { [key in keyof Effects]: number } = {
 	ap: 100,
 	mp: 80,
 	range: 51,
-	critical: 10,
+	summons: 30,
 	vitality: 0.2,
-	strength: 0.5,
+	wisdom: 3,
+	strength: 1,
 	intelligence: 1.2,
-	agility: 1,
 	chance: 1,
-	power: 1,
-	res_percent_neutral: 10,
-	res_percent_earth: 10,
-	res_percent_fire: 10,
-	res_percent_water: 10,
-	res_percent_air: 10,
-	res_pushback: 2,
+	agility: 1,
+	power: 2,
+	critical: 10,
+	pp: 3,
+	lock: 4,
+	dodge: 4,
+
+	ap_red: 7,
+	mp_red: 7,
+	ap_parry: 7,
+	mp_parry: 7,
+	heals: 10,
+	reflect: 15,
+
+	initiative: 0.1,
+	pods: 2.5,
+
+	dmg_neutral: 5,
+	dmg_earth: 5,
 	dmg_fire: 5,
-	heals: 5,
+	dmg_water: 5,
+	dmg_air: 5,
+	dmg_critical: 5,
+	dmg_pushback: 5,
+	dmg_percent_spells: 15,
+	dmg_percent_weapons: 15,
+	dmg_percent_melee: 15,
+	dmg_percent_distance: 15,
+
+	res_percent_neutral: 6,
+	res_percent_earth: 6,
+	res_percent_fire: 6,
+	res_percent_water: 6,
+	res_percent_air: 6,
+
+	res_neutral: 2,
+	res_earth: 2,
+	res_fire: 2,
+	res_water: 2,
+	res_air: 2,
+
+	res_critical: 2,
+	res_pushback: 2,
+	res_spells: 15,
+	res_weapons: 15,
+	res_melee: 15,
+	res_distance: 15,
 };
+function biasWeights(requiredEffects: Effects) {
+	const weights: { [key in keyof Effects]: number } = {};
+	for (const key in effectSink) {
+		if (key === "ap" || key === "mp" || key === "range") {
+			// keep original
+			weights[key as keyof Effects] = effectSink[key as keyof Effects]!;
+			continue;
+		}
+		// inrease or decrease
+		weights[key as keyof Effects] =
+			(requiredEffects[key as keyof Effects] ? 1.5 : 0.5) * effectSink[key as keyof Effects]!;
+	}
+	return weights;
+}
 
 const maxEffectsTable: { [key in keyof Effects]: number } = {
 	ap: 12,
@@ -132,7 +184,12 @@ items.forEach((item) => {
 	}
 });
 
-function calculateFitness(stuff: Stuff, requiredEffects: Effects, baseEffects: Effects): number {
+function calculateFitness(
+	stuff: Stuff,
+	requiredEffects: Effects,
+	baseEffects: Effects,
+	effectWeights: Effects
+): number {
 	let fitness = 0;
 	const combinedStats = calculateCombinedStats(Object.values(stuff.items), baseEffects);
 	// Too High AP MP penalty (exponential)
@@ -515,6 +572,7 @@ function tournamentSelection(
 	population: Stuff[],
 	requiredEffects: Effects,
 	baseEffects: Effects,
+	effectWeights: Effects,
 	tournamentSize = 5
 ): Stuff {
 	const tournament = [];
@@ -522,7 +580,9 @@ function tournamentSelection(
 		tournament.push(population[Math.floor(Math.random() * population.length)]);
 	}
 	tournament.sort(
-		(a, b) => calculateFitness(b, requiredEffects, baseEffects) - calculateFitness(a, requiredEffects, baseEffects)
+		(a, b) =>
+			calculateFitness(b, requiredEffects, baseEffects, effectWeights) -
+			calculateFitness(a, requiredEffects, baseEffects, effectWeights)
 	);
 	return tournament[0];
 }
@@ -536,6 +596,8 @@ export async function geneticAlgorithm(
 ): Promise<{ stuff: Stuff; combinedStats: Effects }> {
 	let population: Stuff[] = Array.from({ length: populationSize }, createRandomStuff);
 
+	const effectWeights = biasWeights(requiredEffects);
+
 	// Make sure initial population is valid
 	population = population.map(ensureNoDuplicateDofus).map((stuff) => repairExcessStats(stuff, baseEffects));
 
@@ -546,11 +608,12 @@ export async function geneticAlgorithm(
 		// Sort by fitness (best first)
 		population.sort(
 			(a, b) =>
-				calculateFitness(b, requiredEffects, baseEffects) - calculateFitness(a, requiredEffects, baseEffects)
+				calculateFitness(b, requiredEffects, baseEffects, effectWeights) -
+				calculateFitness(a, requiredEffects, baseEffects, effectWeights)
 		);
 
 		// Check if we've improved
-		const currentBestFitness = calculateFitness(population[0], requiredEffects, baseEffects);
+		const currentBestFitness = calculateFitness(population[0], requiredEffects, baseEffects, effectWeights);
 		if (currentBestFitness > bestFitnessEver) {
 			bestFitnessEver = currentBestFitness;
 			generationsWithoutImprovement = 0;
@@ -576,8 +639,8 @@ export async function geneticAlgorithm(
 		const newPopulation: Stuff[] = population.slice(0, Math.max(2, Math.floor(populationSize * 0.1)));
 
 		while (newPopulation.length < populationSize) {
-			const parent1 = tournamentSelection(population, requiredEffects, baseEffects);
-			const parent2 = tournamentSelection(population, requiredEffects, baseEffects);
+			const parent1 = tournamentSelection(population, requiredEffects, baseEffects, effectWeights);
+			const parent2 = tournamentSelection(population, requiredEffects, baseEffects, effectWeights);
 			let child = crossover(parent1, parent2, baseEffects);
 
 			if (Math.random() < 0.1) child = mutate(child, baseEffects);
